@@ -3,3 +3,4 @@ __pycache__/
 .env
 .pytest_cache/
 *.pyc
+chroma_db/

@@ -15,28 +15,88 @@ import streamlit as st
 
 from app.retrieval.retriever import retrieve
 from app.generation.generator import generate_answer
+from app.utils.upload_processor import process_uploaded_pdf
 
+
+# -----------------------------
 # Page Configuration
+# -----------------------------
 st.set_page_config(
     page_title="Legal RAG Assistant",
     page_icon="⚖️",
     layout="wide"
 )
 
+# -----------------------------
 # Title
+# -----------------------------
 st.title("⚖️ Legal RAG Assistant")
+
 st.markdown(
-    "Ask questions about your legal documents and receive source-grounded answers."
+    """
+Upload legal PDF documents, process them into a vector database,
+and ask questions using Retrieval-Augmented Generation (RAG).
+"""
 )
 
-# User Input
+st.divider()
+
+# ======================================================
+# Upload Section
+# ======================================================
+
+st.subheader("📄 Upload Legal Documents")
+
+uploaded_files = st.file_uploader(
+    "Choose one or more PDF files",
+    type=["pdf"],
+    accept_multiple_files=True
+)
+
+if uploaded_files:
+
+    st.write("### Selected Files")
+
+    for file in uploaded_files:
+
+        st.write(f"📄 {file.name}")
+
+    if st.button("📥 Process Documents"):
+
+        total_chunks = 0
+
+        with st.spinner("🔄 Processing uploaded documents..."):
+
+            for uploaded_file in uploaded_files:
+
+                chunks = process_uploaded_pdf(
+                    uploaded_file
+                )
+
+                total_chunks += chunks
+
+        st.success(
+            f"✅ Successfully processed {len(uploaded_files)} document(s)"
+        )
+
+        st.info(
+            f"📚 Total Chunks Stored : {total_chunks}"
+        )
+
+st.divider()
+
+# ======================================================
+# Question Section
+# ======================================================
+
+st.subheader("❓ Ask a Question")
+
 query = st.text_input(
-    "Ask a question",
-    placeholder="e.g. What is the license grant?"
+    "Enter your question",
+    placeholder="Example: What is the license grant?"
 )
 
-# Submit Button
-if st.button("Submit"):
+if st.button("🚀 Get Answer"):
 
     if not query.strip():
 
@@ -44,7 +104,7 @@ if st.button("Submit"):
 
     else:
 
-        # Retrieval Spinner
+        # Retrieve Context
         with st.spinner("🔍 Retrieving relevant legal clauses..."):
 
             results = retrieve(query)
@@ -53,7 +113,7 @@ if st.button("Submit"):
                 results["documents"][0]
             )
 
-        # Generation Spinner
+        # Generate Answer
         with st.spinner("🤖 Generating answer..."):
 
             answer = generate_answer(
@@ -61,11 +121,20 @@ if st.button("Submit"):
                 context
             )
 
-        # Display Answer
+        st.divider()
+
+        # -----------------------------
+        # Answer
+        # -----------------------------
         st.subheader("📄 Answer")
+
         st.markdown(answer)
 
-        # Display Sources
+        st.divider()
+
+        # -----------------------------
+        # Sources
+        # -----------------------------
         st.subheader("📚 Sources")
 
         seen = set()
@@ -79,3 +148,10 @@ if st.button("Submit"):
                 st.success(source)
 
                 seen.add(source)
+
+        # -----------------------------
+        # Retrieved Context
+        # -----------------------------
+        with st.expander("🔍 View Retrieved Context"):
+
+            st.write(context)
